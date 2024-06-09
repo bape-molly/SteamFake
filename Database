@@ -1,63 +1,62 @@
--- Tạo bảng users
-CREATE TABLE users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Tạo bảng publishers
-CREATE TABLE publishers (
+CREATE TABLE Publisher (
     publisher_id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
+    publisher_name VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tạo bảng games
-CREATE TABLE games (
+CREATE TABLE User (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_name VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Category (
+    category_id INT AUTO_INCREMENT PRIMARY KEY,
+    category_name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE Games (
     game_id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL,
-    game_name VARCHAR(100) NOT NULL,
+    game_name VARCHAR(255) NOT NULL,
+    publisher_id INT NOT NULL,
+    category_id INT NOT NULL,
     description TEXT,
-    category VARCHAR(50),
-    file_path VARCHAR(255) NOT NULL,
+    file_path VARCHAR(255),
     price DECIMAL(10, 2) NOT NULL,
-    discount_percentage DECIMAL(5, 2) DEFAULT 0.00,
-    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (username) REFERENCES publishers(username)
+    discount INT NOT NULL DEFAULT 0,
+    upload_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (publisher_id) REFERENCES Publisher(publisher_id),
+    FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
 
--- Tạo bảng purchases
-CREATE TABLE purchases (
+CREATE TABLE Purchases (
     purchase_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     game_id INT NOT NULL,
-    purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (game_id) REFERENCES games(game_id)
+    purchase_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id),
+    FOREIGN KEY (game_id) REFERENCES Games(game_id)
 );
 
--- Tạo bảng reviews
-CREATE TABLE reviews (
+CREATE TABLE Review (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     game_id INT NOT NULL,
-    rating INT CHECK (rating >= 1 AND rating <= 5),
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
-    review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (game_id) REFERENCES games(game_id)
+    review_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id),
+    FOREIGN KEY (game_id) REFERENCES Games(game_id)
 );
 
--- Tạo bảng library
-CREATE TABLE library (
+CREATE TABLE Library (
     library_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     game_id INT NOT NULL,
-    added_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (game_id) REFERENCES games(game_id)
+    added_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id),
+    FOREIGN KEY (game_id) REFERENCES Games(game_id)
 );
-    
