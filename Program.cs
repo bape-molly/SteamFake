@@ -423,15 +423,7 @@ class Program
                     break;
                 
                 case "Xuất hoá đơn":
-                    if (currentOrder != null)
-                    {
-                        HandlePayment(currentOrder);
-                        DisplayReceipt(currentOrder, currentTips, currentTotalAmount);
-                    }
-                    else
-                    {
-                        AnsiConsole.MarkupLine("[red]Không có đơn hàng nào để xuất hoá đơn.[/]");
-                    }
+                    DisplayReceipt(currentOrder, currentTips, currentTotalAmount);
                     break;
                 
                 case "Quay lại":
@@ -515,6 +507,8 @@ class Program
                     ClearOrder(order, products);
                     break;
                 case "Finish Order":
+                    SaveOrder(order, currentTips, currentTotalAmount);
+                    HandlePayment(order);
                     return order;
             }
         }
@@ -620,50 +614,60 @@ class Program
         AnsiConsole.MarkupLine($"Total Amount: [green]{currentTotalAmount:F2}[/]");
         AnsiConsole.MarkupLine($"Tips (5% of total): [green]{currentTips:F2}[/]");
 
-        SaveOrder(order, currentTips, currentTotalAmount);
+        DisplayReceipt(order, currentTips, currentTotalAmount);
+        
     }
 
     static void SaveOrder(Order order, decimal tips, decimal totalAmount)
     {
         string connectionString = "Server=localhost;Database=cafe_shop;User=root;Password=youngboy19";
-
-        using (var connection = new MySqlConnection(connectionString))
+        try
         {
-            connection.Open();
-            using (var transaction = connection.BeginTransaction())
+            using (var connection = new MySqlConnection(connectionString))
             {
-                try
+                connection.Open();
+                using (var transaction = connection.BeginTransaction())
                 {
-                    var orderCommand = new MySqlCommand("INSERT INTO Orders (CustomerID, Tips, TotalAmount, OrderDate) VALUES (@CustomerID, @Tips, @TotalAmount, @OrderDate)", connection, transaction);
-                    orderCommand.Parameters.AddWithValue("@CustomerID", order.CustomerID);
-                    orderCommand.Parameters.AddWithValue("@Tips", tips);
-                    orderCommand.Parameters.AddWithValue("@TotalAmount", totalAmount);
-                    orderCommand.Parameters.AddWithValue("@OrderDate", DateTime.Now);
-                    orderCommand.ExecuteNonQuery();
-
-                    foreach (var item in order.Items)
+                    try
                     {
-                        var itemCommand = new MySqlCommand("INSERT INTO OrderItems (OrderID, ProductID, Quantity, Price) VALUES (LAST_INSERT_ID(), @ProductID, @Quantity, @Price)", connection, transaction);
-                        itemCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
-                        itemCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
-                        itemCommand.Parameters.AddWithValue("@Price", item.Price);
-                        itemCommand.ExecuteNonQuery();
+                        var orderCommand = new MySqlCommand("INSERT INTO Orders (CustomerID, Tips, TotalAmount, OrderDate) VALUES (@CustomerID, @Tips, @TotalAmount, @OrderDate)", connection, transaction);
+                        orderCommand.Parameters.AddWithValue("@CustomerID", order.CustomerID);
+                        orderCommand.Parameters.AddWithValue("@Tips", tips);
+                        orderCommand.Parameters.AddWithValue("@TotalAmount", totalAmount);
+                        orderCommand.Parameters.AddWithValue("@OrderDate", DateTime.Now);
+                        orderCommand.ExecuteNonQuery();
 
-                        // Update the product stock in the database
-                        var updateStockCommand = new MySqlCommand("UPDATE Products SET Stock = Stock - @Quantity WHERE ProductID = @ProductID", connection, transaction);
-                        updateStockCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
-                        updateStockCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
-                        updateStockCommand.ExecuteNonQuery();
+                        // Get the last inserted order ID
+                        long orderId = orderCommand.LastInsertedId;
+                        foreach (var item in order.Items)
+                        {
+                            var itemCommand = new MySqlCommand("INSERT INTO OrderItems (OrderID, ProductID, Quantity, Price) VALUES (@OrderID, @ProductID, @Quantity, @Price)", connection, transaction);
+                            itemCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
+                            itemCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
+                            itemCommand.Parameters.AddWithValue("@Price", item.Price);
+                            itemCommand.ExecuteNonQuery();
+
+                            // Update the product stock in the database
+                            var updateStockCommand = new MySqlCommand("UPDATE Products SET Stock = Stock - @Quantity WHERE ProductID = @ProductID", connection, transaction);
+                            updateStockCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
+                            updateStockCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
+                            updateStockCommand.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
                     }
-
-                    transaction.Commit();
-                }
-                catch
-                {
-                    transaction.Rollback();
-                    throw;
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        AnsiConsole.MarkupLine("[red]Error during transaction: {0}[/]", ex.Message);
+                        throw;
+                    }
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine("[red]Error saving order: {0}[/]", ex.Message);
         }
     }
 
