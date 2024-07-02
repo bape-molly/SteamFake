@@ -5,6 +5,7 @@ using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 
 class Program
 {
@@ -399,14 +400,15 @@ class Program
 
 
 
-    static Order currentOrder;
-    static decimal currentTips;
-    static decimal currentTotalAmount;
+    static Order currentOrder = null;
+    static decimal currentTips = 0;
+    static decimal currentTotalAmount = 0;
     
     static void OrderMenu()
     {
         
         List<Product> products = GetProducts();
+    
         while(true)
         {
             AnsiConsole.Clear();
@@ -419,11 +421,24 @@ class Program
             switch (choice)
             {
                 case "Tạo đơn hàng":
-                    CreateOrder(products);
+                    currentOrder = CreateOrder(products);
+                    currentTips = 0;
+                    currentTotalAmount = 0;
                     break;
                 
                 case "Xuất hoá đơn":
-                    DisplayReceipt(currentOrder, currentTips, currentTotalAmount);
+                    if (currentOrder != null)
+                    {
+                        HandlePayment(currentOrder);
+                        AnsiConsole.MarkupLine("\n[green]Nhấn Enter để quay lại Order Menu.[/]");
+                        Console.ReadLine();
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine("[red]No order available to display the receipt.[/]");
+                        AnsiConsole.MarkupLine("\n[green]Nhấn Enter để tiếp tục[/]");
+                        Console.ReadLine();
+                    }
                     break;
                 
                 case "Quay lại":
@@ -482,12 +497,44 @@ class Program
 
         AnsiConsole.Write(table);
     }
+
+
+    static int GetValidCustomerID()
+    {
+        string connectionString = "Server=localhost;Database=cafe_shop;User=root;Password=youngboy19";
+        int customerID;
+
+        using (var connection = new MySqlConnection(connectionString))
+        {
+            connection.Open();
+            while (true)
+            {
+                customerID = AnsiConsole.Ask<int>("Enter Customer ID:");
+
+                var checkCustomerCommand = new MySqlCommand("SELECT COUNT(*) FROM Customers WHERE CustomerID = @CustomerID", connection);
+                checkCustomerCommand.Parameters.AddWithValue("@CustomerID", customerID);
+                var customerExists = Convert.ToInt32(checkCustomerCommand.ExecuteScalar()) > 0;
+
+                if (customerExists)
+                {
+                    break;
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[red]CustomerID does not exist in the Customers table. Please enter a valid CustomerID.[/]");
+                }
+            }
+        }
+
+        return customerID;
+    }
     
     static Order CreateOrder(List<Product> products)
     {
         var order = new Order();
         order.Items = new List<OrderItem>();
-
+        
+        order.CustomerID = GetValidCustomerID();
         while (true)
         {
             var action = AnsiConsole.Prompt(
@@ -507,8 +554,10 @@ class Program
                     ClearOrder(order, products);
                     break;
                 case "Finish Order":
-                    SaveOrder(order, currentTips, currentTotalAmount);
                     HandlePayment(order);
+                    SaveOrder(order, currentTips, currentTotalAmount);
+                    AnsiConsole.MarkupLine("\n[green]Press Enter to return to the main menu.[/]");
+                    Console.ReadLine(); // Chờ người dùng nhấn Enter
                     return order;
             }
         }
@@ -630,6 +679,18 @@ class Program
                 {
                     try
                     {
+                        // Kiểm tra nếu CustomerID tồn tại trong bảng Customers
+                        var checkCustomerCommand = new MySqlCommand("SELECT COUNT(*) FROM Customers WHERE CustomerID = @CustomerID", connection, transaction);
+                        checkCustomerCommand.Parameters.AddWithValue("@CustomerID", order.CustomerID);
+                        var customerExists = Convert.ToInt32(checkCustomerCommand.ExecuteScalar()) > 0;
+
+                        if (!customerExists)
+                        {
+                            AnsiConsole.MarkupLine("[red]CustomerID does not exist in the Customers table.[/]");
+                            transaction.Rollback();
+                            return;
+                        }   
+
                         var orderCommand = new MySqlCommand("INSERT INTO Orders (CustomerID, Tips, TotalAmount, OrderDate) VALUES (@CustomerID, @Tips, @TotalAmount, @OrderDate)", connection, transaction);
                         orderCommand.Parameters.AddWithValue("@CustomerID", order.CustomerID);
                         orderCommand.Parameters.AddWithValue("@Tips", tips);
@@ -642,9 +703,11 @@ class Program
                         foreach (var item in order.Items)
                         {
                             var itemCommand = new MySqlCommand("INSERT INTO OrderItems (OrderID, ProductID, Quantity, Price) VALUES (@OrderID, @ProductID, @Quantity, @Price)", connection, transaction);
+                            itemCommand.Parameters.AddWithValue("@OrderID", orderId);
                             itemCommand.Parameters.AddWithValue("@ProductID", item.ProductID);
                             itemCommand.Parameters.AddWithValue("@Quantity", item.Quantity);
                             itemCommand.Parameters.AddWithValue("@Price", item.Price);
+                            AnsiConsole.MarkupLine("[yellow]Executing SQL:[/] {0}", itemCommand.CommandText);
                             itemCommand.ExecuteNonQuery();
 
                             // Update the product stock in the database
@@ -655,24 +718,46 @@ class Program
                         }
 
                         transaction.Commit();
+                        AnsiConsole.MarkupLine("[green]Order saved successfully.[/]");
+                    }
+                    catch (MySqlException ex)
+                    {
+                        transaction.Rollback();
+                        AnsiConsole.MarkupLine("[red]SQL Error during transaction: {0}[/]", ex.Message);
+                        AnsiConsole.MarkupLine("[red]SQL Error details: {0}[/]", ex.ToString());
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         transaction.Rollback();
                         AnsiConsole.MarkupLine("[red]Error during transaction: {0}[/]", ex.Message);
+                        AnsiConsole.MarkupLine("[red]Error details: {0}[/]", ex.ToString());
                         throw;
                     }
                 }
             }
         }
+        catch (MySqlException ex)
+        {
+            AnsiConsole.MarkupLine("[red]SQL Error saving order: {0}[/]", ex.Message);
+            AnsiConsole.MarkupLine("[red]SQL Error details: {0}[/]", ex.ToString());
+        }
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine("[red]Error saving order: {0}[/]", ex.Message);
+            AnsiConsole.MarkupLine("[red]Error details: {0}[/]", ex.ToString());
         }
     }
 
+
     static void DisplayReceipt(Order order, decimal tips, decimal totalAmount)
     {
+        DateTime orderDate;
+        if (order == null || order.Items == null)
+        {
+            AnsiConsole.MarkupLine("[red]Invalid order data.[/]");
+            return;
+        }
         var receipt = new Table();
         receipt.AddColumn("CustomerID");
         receipt.AddColumn("ProductID");
@@ -680,6 +765,7 @@ class Program
         receipt.AddColumn("Type");
         receipt.AddColumn("Quantity");
         receipt.AddColumn("Price");
+        receipt.AddColumn("OrderDate");
 
         foreach (var item in order.Items)
         {
