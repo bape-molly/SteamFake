@@ -101,7 +101,7 @@ class Program
             switch (choice)
             {
                 case "Dashboard":
-                    AnsiConsole.MarkupLine("[yellow]Bảng điều khiển hiện chưa có chức năng![/]");
+                    DashboardMenu();
                     break;
 
                 case "Cashier":
@@ -717,6 +717,15 @@ class Program
                             updateStockCommand.ExecuteNonQuery();
                         }
 
+                        decimal totalPrice = order.Items.Sum(i => i.Quantity * i.Price);
+                        var customerCommand = new MySqlCommand("UPDATE Customers SET TotalPrice = @TotalPrice, Amount = @TotalAmount, Tips = @Tips, PaymentTime = @OrderDate WHERE CustomerID = @CustomerID", connection, transaction);
+                        customerCommand.Parameters.AddWithValue("@TotalPrice", totalPrice);
+                        customerCommand.Parameters.AddWithValue("@TotalAmount", totalAmount);
+                        customerCommand.Parameters.AddWithValue("@Tips", tips);
+                        customerCommand.Parameters.AddWithValue("@OrderDate", DateTime.Now);
+                        customerCommand.Parameters.AddWithValue("@CustomerID", order.CustomerID);
+                        customerCommand.ExecuteNonQuery();
+
                         transaction.Commit();
                         AnsiConsole.MarkupLine("[green]Order saved successfully.[/]");
                     }
@@ -783,7 +792,18 @@ class Program
     static void CustomerMenu()
     {
         List<Customer> customers = GetCustomers();
-        DisplayCustomers(customers);
+        while (true)
+        {
+            DisplayCustomers(customers);
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                .Title("Nhấn [green]Enter[/] để quay lại menu chính.")
+                .AddChoices("back"));
+            
+            if (choice == "back")
+                return;            
+            
+        }
     }
 
     static List<Customer> GetCustomers()
@@ -829,6 +849,75 @@ class Program
         }
 
         AnsiConsole.Write(table);
+    }
+
+
+
+
+    static void DashboardMenu()
+    {
+        int totalCashiers = GetTotalCashier();
+        int totalCustomers = GetTotalCustomers();
+        decimal todaysIncome = GetTodaysIncome();
+        decimal totalIncome = GetTotalIncome();
+
+        var table = new Table();
+        table.AddColumn("Total of Cashiers");
+        table.AddColumn("Total of Customers");
+        table.AddColumn("Today's Income");
+        table.AddColumn("Total Income");
+
+        table.AddRow(totalCashiers.ToString(), totalCustomers.ToString(), todaysIncome.ToString("F2"), totalIncome.ToString("F2"));
+        AnsiConsole.Write(table);
+
+        AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Nhấn [green]Enter[/] để quay lại Menu chính.")
+                .AddChoices("back"));
+    }
+
+    static int GetTotalCashier()
+    {
+        string connectionString = "Server=localhost;Database=cafe_shop;User=root;Password=youngboy19";
+        using (var connection = new MySqlConnection(connectionString))
+        {
+            connection.Open();
+            var command = new MySqlCommand("SELECT COUNT(*) FROM Users WHERE Role = 'Cashier'", connection);
+            return Convert.ToInt32(command.ExecuteScalar());
+        }
+    }
+
+    static int GetTotalCustomers()
+    {
+        string connectionString = "Server=localhost;Database=cafe_shop;User=root;Password=youngboy19";
+        using (var connection = new MySqlConnection(connectionString))
+        {
+            connection.Open();
+            var command = new MySqlCommand("SELECT COUNT(*) FROM Customers", connection);
+            return Convert.ToInt32(command.ExecuteScalar());
+        }
+    }
+
+    static decimal GetTodaysIncome()
+    {
+        string connectionString = "Server=localhost;Database=cafe_shop;User=root;Password=youngboy19";
+        using (var connection = new MySqlConnection(connectionString))
+        {
+            connection.Open();
+            var command = new MySqlCommand("SELECT SUM(TotalAmount) FROM Orders WHERE DATE(OrderDate) = CURDATE()", connection);
+            return Convert.ToDecimal(command.ExecuteScalar());
+        }
+    }
+
+    static decimal GetTotalIncome()
+    {
+        string connectionString = "Server=localhost;Database=cafe_shop;User=root;Password=youngboy19";
+        using (var connection = new MySqlConnection(connectionString))
+        {
+            connection.Open();
+            var command = new MySqlCommand("SELECT SUM(TotalAmount) FROM Orders", connection);
+            return Convert.ToDecimal(command.ExecuteScalar());
+        }
     }
 
 }
