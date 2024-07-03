@@ -16,7 +16,7 @@ class Program
 
         while (true)
         {
-            // Thiết lập tiêu đề
+            // tiêu đề
             AnsiConsole.Write(
                 new FigletText("Cafe Shop")
                     .Centered()
@@ -24,7 +24,7 @@ class Program
             
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("Chọn [green]tác vụ[/]:")
+                    
                     .AddChoices("Đăng nhập", "Đăng ký", "Thoát")
                     
                     );
@@ -50,6 +50,8 @@ class Program
                         else
                         {
                             AnsiConsole.MarkupLine("[red]Đăng nhập thất bại hoặc không có quyền truy cập![/]");
+                            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
+                            AnsiConsole.Clear();
                         }
 
                         break;
@@ -66,6 +68,8 @@ class Program
                         if (password != confirmPassword)
                         {
                             AnsiConsole.MarkupLine("[red]Mật khẩu nhập lại không khớp![/]");
+                            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
+                            AnsiConsole.Clear();
                             break;
                         }
                         var role = "Admin";
@@ -84,6 +88,8 @@ class Program
 
                         userManager.RegisterUser(user);
                         AnsiConsole.MarkupLine("[green]Đăng ký thành công![/]");
+                        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
+                        AnsiConsole.Clear();
 
                         break;
                     }
@@ -100,10 +106,15 @@ class Program
         while (true)
         {
             AnsiConsole.Clear();
+            // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
             AnsiConsole.MarkupLine($"[bold blue]Xin chào Admin, {loggedInUser.Username}![/]");
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("Chọn [green]chức năng[/]:")
+                    
                     .AddChoices("Dashboard", "Cashier", "Products", "Orders", "Customers", "Logout"));
 
             switch (choice)
@@ -129,6 +140,7 @@ class Program
                     break;
 
                 case "Logout":
+                    AnsiConsole.Clear();
                     return;
             }
         }
@@ -141,11 +153,16 @@ class Program
         while (true)
         {
             AnsiConsole.Clear();
+            // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
             AnsiConsole.MarkupLine($"[bold blue]Quản lý thu ngân - {loggedInUser.Username}[/]");
 
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("Chọn [green]chức năng[/]:")
+                    
                     .AddChoices("Hiển thị danh sách thu ngân", "Thêm thu ngân", "Sửa thông tin thu ngân", "Xóa thu ngân", "Quay lại"));
 
             switch (choice)
@@ -216,6 +233,8 @@ class Program
 
         userManager.RegisterUser(user);
         AnsiConsole.MarkupLine("[green]Thêm thu ngân thành công![/]");
+        DisplayCashiers(userManager);
+        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
     }
 
     static void EditCashier(UserManager userManager)
@@ -241,6 +260,8 @@ class Program
 
         userManager.UpdateUser(cashier);
         AnsiConsole.MarkupLine("[green]Sửa thông tin thu ngân thành công![/]");
+        DisplayCashiers(userManager);
+        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
     }
 
     static void DeleteCashier(UserManager userManager)
@@ -256,6 +277,8 @@ class Program
 
         userManager.DeleteUser(cashierId);
         AnsiConsole.MarkupLine("[green]Xóa thu ngân thành công![/]");
+        DisplayCashiers(userManager);
+        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
     }
 
 
@@ -269,6 +292,11 @@ class Program
         while (true)
         {
             AnsiConsole.Clear();
+            // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
             DisplayProducts(productManager);
 
             var choice = AnsiConsole.Prompt(
@@ -308,12 +336,13 @@ class Program
         table.AddColumn("Stock");
         table.AddColumn("Price");
         table.AddColumn("Status");
+        table.AddColumn("Image");
         table.AddColumn("DateInsert");
         table.AddColumn("DateUpdate");
 
         foreach (var product in products)
         {
-            table.AddRow(product.Id.ToString(), product.ProductID, product.ProductName, product.Type, product.Stock.ToString(), product.Price.ToString(), product.Status, product.DateInsert.ToString(), product.DateUpdate?.ToString());
+            table.AddRow(product.Id.ToString(), product.ProductID, product.ProductName, product.Type, product.Stock.ToString(), product.Price.ToString(), product.Status, product.Image, product.DateInsert.ToString(), product.DateUpdate?.ToString());
         }
 
         AnsiConsole.Render(table);
@@ -349,8 +378,10 @@ class Program
         };
 
         productManager.AddProduct(product);
+        AnsiConsole.Clear();
         AnsiConsole.MarkupLine("[green]Thêm sản phẩm thành công![/]");
         DisplayProducts(productManager);
+        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
     }
 
     static void EditProduct(ProductManager productManager)
@@ -385,8 +416,10 @@ class Program
         product.DateUpdate = dateUpdate;
 
         productManager.UpdateProduct(product);
+        AnsiConsole.Clear();
         AnsiConsole.MarkupLine("[green]Sửa thông tin sản phẩm thành công![/]");
         DisplayProducts(productManager);
+        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
     }
 
     static void DeleteProduct(ProductManager productManager)
@@ -401,8 +434,10 @@ class Program
         }
 
         productManager.DeleteProduct(productId);
+        AnsiConsole.Clear();
         AnsiConsole.MarkupLine("[green]Xóa sản phẩm thành công![/]");
         DisplayProducts(productManager);
+        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
     }
 
 
@@ -596,6 +631,7 @@ class Program
             Price = product.Price
         });
         product.Stock -= quantity;
+        AnsiConsole.Clear();
         AnsiConsole.MarkupLine("[green]Product added to order successfully![/]");
         DisplayOrder(order);
     }
@@ -613,6 +649,7 @@ class Program
         // Restore the stock when the item is removed from the order
         var product = products.First(p => p.ProductID == item.ProductID);
         product.Stock += item.Quantity;
+        AnsiConsole.Clear();
         AnsiConsole.MarkupLine("[green]Product removed to order successfully![/]");
         DisplayOrder(order);
     }
@@ -626,6 +663,7 @@ class Program
         }
 
         order.Items.Clear();
+        AnsiConsole.Clear();
         AnsiConsole.MarkupLine("[yellow]Order cleared and stocks restored.[/]");
         DisplayOrder(order);
     }
