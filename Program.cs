@@ -16,12 +16,20 @@ class Program
 
         while (true)
         {
-            
+            // Thiết lập tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
             
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("Chọn [green]tác vụ[/]:")
-                    .AddChoices("Đăng nhập", "Đăng ký", "Thoát"));
+                    .AddChoices("Đăng nhập", "Đăng ký", "Thoát")
+                    
+                    );
+                    
+
 
             switch (choice)
             {
@@ -499,42 +507,28 @@ class Program
     }
 
 
-    static int GetValidCustomerID()
+    static int CreateNewCustomer()
     {
         string connectionString = "Server=localhost;Database=cafe_shop;User=root;Password=youngboy19";
-        int customerID;
-
         using (var connection = new MySqlConnection(connectionString))
         {
             connection.Open();
-            while (true)
-            {
-                customerID = AnsiConsole.Ask<int>("Enter Customer ID:");
-
-                var checkCustomerCommand = new MySqlCommand("SELECT COUNT(*) FROM Customers WHERE CustomerID = @CustomerID", connection);
-                checkCustomerCommand.Parameters.AddWithValue("@CustomerID", customerID);
-                var customerExists = Convert.ToInt32(checkCustomerCommand.ExecuteScalar()) > 0;
-
-                if (customerExists)
-                {
-                    break;
-                }
-                else
-                {
-                    AnsiConsole.MarkupLine("[red]CustomerID does not exist in the Customers table. Please enter a valid CustomerID.[/]");
-                }
-            }
+            var command = new MySqlCommand("INSERT INTO Customers (TotalPrice, Amount, Tips, PaymentTime) VALUES (0, 0, 0, NOW())", connection);
+            command.ExecuteNonQuery();
+            return Convert.ToInt32(new MySqlCommand("SELECT LAST_INSERT_ID()", connection).ExecuteScalar());
         }
-
-        return customerID;
-    }
+    }   
     
     static Order CreateOrder(List<Product> products)
     {
         var order = new Order();
         order.Items = new List<OrderItem>();
+
+        // Tạo khách hàng mới và lấy CustomerID
+        int newCustomerID = CreateNewCustomer();
+        order.CustomerID = newCustomerID;
         
-        order.CustomerID = GetValidCustomerID();
+        
         while (true)
         {
             var action = AnsiConsole.Prompt(
@@ -679,17 +673,7 @@ class Program
                 {
                     try
                     {
-                        // Kiểm tra nếu CustomerID tồn tại trong bảng Customers
-                        var checkCustomerCommand = new MySqlCommand("SELECT COUNT(*) FROM Customers WHERE CustomerID = @CustomerID", connection, transaction);
-                        checkCustomerCommand.Parameters.AddWithValue("@CustomerID", order.CustomerID);
-                        var customerExists = Convert.ToInt32(checkCustomerCommand.ExecuteScalar()) > 0;
-
-                        if (!customerExists)
-                        {
-                            AnsiConsole.MarkupLine("[red]CustomerID does not exist in the Customers table.[/]");
-                            transaction.Rollback();
-                            return;
-                        }   
+                        
 
                         var orderCommand = new MySqlCommand("INSERT INTO Orders (CustomerID, Tips, TotalAmount, OrderDate) VALUES (@CustomerID, @Tips, @TotalAmount, @OrderDate)", connection, transaction);
                         orderCommand.Parameters.AddWithValue("@CustomerID", order.CustomerID);
@@ -697,6 +681,8 @@ class Program
                         orderCommand.Parameters.AddWithValue("@TotalAmount", totalAmount);
                         orderCommand.Parameters.AddWithValue("@OrderDate", DateTime.Now);
                         orderCommand.ExecuteNonQuery();
+
+                        var orderID = Convert.ToInt32(new MySqlCommand("SELECT LAST_INSERT_ID()", connection, transaction).ExecuteScalar());
 
                         // Get the last inserted order ID
                         long orderId = orderCommand.LastInsertedId;
