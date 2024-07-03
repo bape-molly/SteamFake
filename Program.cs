@@ -212,6 +212,7 @@ class Program
 
     static void AddCashier(UserManager userManager)
     {
+        DisplayCashiers(userManager);
         var username = AnsiConsole.Ask<string>("Nhập [green]tên tài khoản[/]:");
         var password = AnsiConsole.Prompt(
             new TextPrompt<string>("Nhập [green]mật khẩu[/]:").Secret());
@@ -232,6 +233,12 @@ class Program
         };
 
         userManager.RegisterUser(user);
+        AnsiConsole.Clear();
+        // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
         AnsiConsole.MarkupLine("[green]Thêm thu ngân thành công![/]");
         DisplayCashiers(userManager);
         AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
@@ -239,12 +246,14 @@ class Program
 
     static void EditCashier(UserManager userManager)
     {
+        DisplayCashiers(userManager);
         var cashierId = AnsiConsole.Ask<int>("Nhập [green]ID thu ngân[/] cần sửa:");
         var cashier = userManager.GetUserById(cashierId);
 
         if (cashier == null || cashier.Role != "Cashier")
         {
             AnsiConsole.MarkupLine("[red]Thu ngân không tồn tại hoặc không phải thu ngân![/]");
+            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
             return;
         }
 
@@ -259,6 +268,12 @@ class Program
         cashier.Image = image;
 
         userManager.UpdateUser(cashier);
+        AnsiConsole.Clear();
+        // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
         AnsiConsole.MarkupLine("[green]Sửa thông tin thu ngân thành công![/]");
         DisplayCashiers(userManager);
         AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
@@ -266,16 +281,24 @@ class Program
 
     static void DeleteCashier(UserManager userManager)
     {
+        DisplayCashiers(userManager);
         var cashierId = AnsiConsole.Ask<int>("Nhập [green]ID thu ngân[/] cần xóa:");
         var cashier = userManager.GetUserById(cashierId);
 
         if (cashier == null)
         {
             AnsiConsole.MarkupLine("[red]Thu ngân không tồn tại![/]");
+            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
             return;
         }
 
         userManager.DeleteUser(cashierId);
+        AnsiConsole.Clear();
+        // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
         AnsiConsole.MarkupLine("[green]Xóa thu ngân thành công![/]");
         DisplayCashiers(userManager);
         AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
@@ -379,6 +402,11 @@ class Program
 
         productManager.AddProduct(product);
         AnsiConsole.Clear();
+        // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
         AnsiConsole.MarkupLine("[green]Thêm sản phẩm thành công![/]");
         DisplayProducts(productManager);
         AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
@@ -417,6 +445,11 @@ class Program
 
         productManager.UpdateProduct(product);
         AnsiConsole.Clear();
+        // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
         AnsiConsole.MarkupLine("[green]Sửa thông tin sản phẩm thành công![/]");
         DisplayProducts(productManager);
         AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
@@ -435,6 +468,11 @@ class Program
 
         productManager.DeleteProduct(productId);
         AnsiConsole.Clear();
+        // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
         AnsiConsole.MarkupLine("[green]Xóa sản phẩm thành công![/]");
         DisplayProducts(productManager);
         AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
@@ -451,11 +489,24 @@ class Program
     {
         
         List<Product> products = GetProducts();
+
+        bool showProducts = true;
+
     
         while(true)
         {
             AnsiConsole.Clear();
-		    DisplayProduct(products);
+            // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
+
+            if (showProducts)
+            {
+                DisplayProduct(products); // Hiển thị danh sách sản phẩm trước khi chọn các case
+            }
+
 		    var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("Chọn [green]chức năng[/]:")
@@ -464,15 +515,34 @@ class Program
             switch (choice)
             {
                 case "Tạo đơn hàng":
+                    AnsiConsole.Clear();
+                    // tiêu đề
+                    AnsiConsole.Write(
+                    new FigletText("Cafe Shop")
+                        .Centered()
+                        .Color(Color.Green));
+                    
+                    showProducts = true; // Hiển thị danh sách sản phẩm lần tới
+
                     currentOrder = CreateOrder(products);
                     currentTips = 0;
                     currentTotalAmount = 0;
                     break;
                 
                 case "Xuất hoá đơn":
+                    AnsiConsole.Clear();
+                    AnsiConsole.Write(
+                    new FigletText("Cafe Shop")
+                        .Centered()
+                        .Color(Color.Green));
+
                     if (currentOrder != null)
                     {
+                        showProducts = false; // Không hiển thị danh sách sản phẩm lần tới
+                        AnsiConsole.MarkupLine("\n[green]Địa chỉ: 123 Đường ABC, Phường XYZ, Thành phố QWERTY[/]");
                         HandlePayment(currentOrder);
+                        AnsiConsole.MarkupLine($"[green]Thời gian hiện tại: {DateTime.Now:yyyy-MM-dd HH:mm:ss}[/]");
+
                         AnsiConsole.MarkupLine("\n[green]Nhấn Enter để quay lại Order Menu.[/]");
                         Console.ReadLine();
                     }
@@ -566,6 +636,15 @@ class Program
         
         while (true)
         {
+            AnsiConsole.Clear();
+            // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
+            
+            DisplayProduct(products);
+            
             var action = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("Order Menu")
@@ -574,12 +653,15 @@ class Program
             switch (action)
             {
                 case "Add Item":
+                    DisplayOrder(order);
                     AddItemToOrder(order, products);
                     break;
                 case "Remove Item":
+                    DisplayOrder(order);
                     RemoveItemFromOrder(order, products);
                     break;
                 case "Clear Order":
+                    DisplayOrder(order);
                     ClearOrder(order, products);
                     break;
                 case "Finish Order":
@@ -594,6 +676,15 @@ class Program
 
     static void AddItemToOrder(Order order, List<Product> products)
     {
+        AnsiConsole.Clear();
+        // tiêu đề
+        AnsiConsole.Write(
+            new FigletText("Cafe Shop")
+                .Centered()
+                .Color(Color.Green));
+            
+        DisplayProduct(products);
+        DisplayOrder(order);
         var type = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("Select Product Type")
@@ -632,12 +723,29 @@ class Program
         });
         product.Stock -= quantity;
         AnsiConsole.Clear();
+        // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
         AnsiConsole.MarkupLine("[green]Product added to order successfully![/]");
+        DisplayProduct(products);
         DisplayOrder(order);
+        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
     }
 
     static void RemoveItemFromOrder(Order order, List<Product> products)
     {
+        AnsiConsole.Clear();
+        // tiêu đề
+        AnsiConsole.Write(
+            new FigletText("Cafe Shop")
+                .Centered()
+                .Color(Color.Green));
+            
+        DisplayProduct(products);
+        DisplayOrder(order);
+        
         var productID = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("Select Product ID to Remove:")
@@ -649,13 +757,30 @@ class Program
         // Restore the stock when the item is removed from the order
         var product = products.First(p => p.ProductID == item.ProductID);
         product.Stock += item.Quantity;
+
         AnsiConsole.Clear();
+        // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
         AnsiConsole.MarkupLine("[green]Product removed to order successfully![/]");
+        DisplayProduct(products);
         DisplayOrder(order);
+        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
     }
 
     static void ClearOrder(Order order, List<Product> products)
     {
+        AnsiConsole.Clear();
+        // tiêu đề
+        AnsiConsole.Write(
+            new FigletText("Cafe Shop")
+                .Centered()
+                .Color(Color.Green));
+            
+        DisplayProduct(products);
+        DisplayOrder(order);
         foreach (var item in order.Items)
         {
             var product = products.First(p => p.ProductID == item.ProductID);
@@ -663,9 +788,17 @@ class Program
         }
 
         order.Items.Clear();
+
         AnsiConsole.Clear();
+        // tiêu đề
+            AnsiConsole.Write(
+                new FigletText("Cafe Shop")
+                    .Centered()
+                    .Color(Color.Green));
         AnsiConsole.MarkupLine("[yellow]Order cleared and stocks restored.[/]");
+        DisplayProduct(products);
         DisplayOrder(order);
+        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Nhấn [green]Enter[/] để quay lại").AddChoices("Quay lại"));
     }
 
     static void DisplayOrder(Order order)
@@ -688,14 +821,19 @@ class Program
 
     static void HandlePayment(Order order)
     {
+        
+
+        DisplayReceipt(order, currentTips, currentTotalAmount);
+
         decimal totalPrice = order.Items.Sum(i => i.Quantity * i.Price);
         currentTips = totalPrice * 0.05m; // tính tips là 5% tổng giá trị sản phẩm
         currentTotalAmount = totalPrice + currentTips;
 
         AnsiConsole.MarkupLine($"Total Amount: [green]{currentTotalAmount:F2}[/]");
         AnsiConsole.MarkupLine($"Tips (5% of total): [green]{currentTips:F2}[/]");
+        
 
-        DisplayReceipt(order, currentTips, currentTotalAmount);
+        
         
     }
 
@@ -798,15 +936,12 @@ class Program
         receipt.AddColumn("Type");
         receipt.AddColumn("Quantity");
         receipt.AddColumn("Price");
-        receipt.AddColumn("OrderDate");
 
         foreach (var item in order.Items)
         {
             receipt.AddRow(order.CustomerID.ToString(), item.ProductID, item.ProductName, item.Type, item.Quantity.ToString(), item.Price.ToString("F2"));
         }
 
-        receipt.AddRow("", "", "", "", "Tips", tips.ToString("F2"));
-        receipt.AddRow("", "", "", "", "Total Amount", totalAmount.ToString("F2"));
 
         AnsiConsole.Write(receipt);
     }
