@@ -131,4 +131,20 @@ public class UserManager
             command.ExecuteNonQuery();
         }
     }
+
+    public bool UsernameExists(string username)
+    {
+        using (MySqlConnection conn = new MySqlConnection(connectionString))
+        {
+            conn.Open();
+            string checkQuery = "SELECT COUNT(*) FROM users WHERE Username = @Username";
+            using (MySqlCommand cmd = new MySqlCommand(checkQuery, conn))
+            {
+                cmd.Parameters.AddWithValue("@Username", username);
+                int userCount = Convert.ToInt32(cmd.ExecuteScalar());
+                return userCount > 0;
+            }
+        }
+    }
+
 }

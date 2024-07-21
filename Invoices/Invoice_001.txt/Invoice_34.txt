@@ -1,0 +1,9 @@
+Cafe Shop
+18 Tam Trinh, Hoang Mai, Hanoi
+Time: 2024-07-21 17:50:25
+
+Items:
+Product ID: PROD-9, Quantity: 5, Price: $4.00, Total: $20.00
+
+Total Amount: 21.00
+Tips (5% of total): 1.00

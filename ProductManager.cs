@@ -84,19 +84,6 @@ public class ProductManager
         }
     }
 
-    public void DeleteProduct(int productId)
-    {
-        using (var connection = new MySqlConnection(connectionString))
-        {
-            connection.Open();
-            var query = "DELETE FROM Products WHERE Id = @Id";
-            using (var command = new MySqlCommand(query, connection))
-            {
-                command.Parameters.AddWithValue("@Id", productId);
-                command.ExecuteNonQuery();
-            }
-        }
-    }
 
     public int GetNextProductID()
     {

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.IO;
 
 class Program
 {
@@ -59,38 +60,57 @@ class Program
 
                 case "Register":
                     {
-                        var username = AnsiConsole.Ask<string>("[green]User name[/]:");
-                        var password = AnsiConsole.Prompt(
-                            new TextPrompt<string>("[green]Password[/]:").Secret());
-                        var confirmPassword = AnsiConsole.Prompt(
-                            new TextPrompt<string>("Re-enter [green]Password[/]:").Secret());
-                        
-                        if (password != confirmPassword)
+                        var userManagerInstance = new UserManager();
+                        while (true)
                         {
-                            AnsiConsole.MarkupLine("[red]The re-entered password does not match![/]");
-                            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to return").AddChoices("Return"));
+                            var username = AnsiConsole.Ask<string>("[green]User name[/]:");
+                            if (userManagerInstance.UsernameExists(username))
+                            {
+                                AnsiConsole.MarkupLine("[red]Username already exists, please re-enter.[/]");
+                                continue;
+                            }
+                            var password = AnsiConsole.Prompt(
+                                new TextPrompt<string>("[green]Password[/]:").Secret());
+                            var confirmPassword = AnsiConsole.Prompt(
+                                new TextPrompt<string>("Re-enter [green]Password[/]:").Secret());
+                        
+                            if (password != confirmPassword)
+                            {
+                                AnsiConsole.MarkupLine("[red]The re-entered password does not match![/]");
+                                AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to return").AddChoices("Return"));
+                                AnsiConsole.Clear();
+                                break;
+                            }
+                            var role = "Admin";
+                            var status = "Active";
+                            var registrationDate = DateTime.Now;
+
+                            var user = new User
+                            {
+                                Username = username,
+                                Password = password,
+                                Role = role,
+                                Status = status,
+                                RegistrationDate = registrationDate
+
+                            };
+
+                            try
+                            {
+                            userManager.RegisterUser(user);
+                            AnsiConsole.MarkupLine("[green]Sign up success![/]");
+                            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to continue").AddChoices("Continue"));
                             AnsiConsole.Clear();
                             break;
+                            }
+                            catch (Exception ex)
+                            {
+                                AnsiConsole.MarkupLine($"[red]An error occurred: {ex.Message}[/]");
+                                AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to return").AddChoices("Return"));
+                                AnsiConsole.Clear();
+                                break;
+                            }
                         }
-                        var role = "Admin";
-                        var status = "Active";
-                        var registrationDate = DateTime.Now;
-
-                        var user = new User
-                        {
-                            Username = username,
-                            Password = password,
-                            Role = role,
-                            Status = status,
-                            RegistrationDate = registrationDate
-
-                        };
-
-                        userManager.RegisterUser(user);
-                        AnsiConsole.MarkupLine("[green]Sign up success![/]");
-                        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to continue").AddChoices("Continue"));
-                        AnsiConsole.Clear();
-
                         break;
                     }
 
@@ -325,7 +345,7 @@ class Program
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     
-                    .AddChoices("Add Product", "Edit Product", "Delete Product", "Return"));
+                    .AddChoices("Add Product", "Edit Product", "Return"));
 
             switch (choice)
             {
@@ -335,10 +355,6 @@ class Program
 
                 case "Edit Product":
                     EditProduct(productManager);
-                    break;
-
-                case "Delete Product":
-                    DeleteProduct(productManager);
                     break;
 
                 case "Return":
@@ -363,12 +379,35 @@ class Program
         table.AddColumn("DateInsert");
         table.AddColumn("DateUpdate");
 
+        // Đặt độ dài tối đa cho cột Image
+        int maxLength = 29;  
+
         foreach (var product in products)
         {
-            table.AddRow(product.Id.ToString(), product.ProductID, product.ProductName, product.Type, product.Stock.ToString(), product.Price.ToString(), product.Status, product.Image, product.DateInsert.ToString(), product.DateUpdate?.ToString());
+            table.AddRow(
+                product.Id.ToString(), 
+                product.ProductID, 
+                product.ProductName, 
+                product.Type, 
+                product.Stock.ToString(), 
+                product.Price.ToString(), 
+                product.Status, 
+                Truncate(product.Image, maxLength), 
+                product.DateInsert.ToString(), 
+                product.DateUpdate?.ToString()
+            );
         }
 
         AnsiConsole.Render(table);
+    }
+
+    static string Truncate(string text, int maxLength)
+    {
+        if (text.Length > maxLength)
+        {
+            return text.Substring(0, maxLength) + "...";
+        }
+        return text;
     }
 
 
@@ -380,9 +419,59 @@ class Program
             new SelectionPrompt<string>()
                 .Title(" [green]Type[/]:")
                 .AddChoices("Meal", "Drink"));
-        var stock = AnsiConsole.Ask<int>(" [green]Quantity[/]:");
-        var price = AnsiConsole.Ask<decimal>(" [green]Price[/]:");
-        var status = "Available";
+        
+        int stock;
+        while (true)
+        {
+            try
+            {
+                stock = AnsiConsole.Ask<int>(" [green]Quantity:[/]");
+                if (stock < 0)
+                {
+                    AnsiConsole.MarkupLine("[red]Error, please re-enter.[/]");
+                }
+                else
+                {
+                    break;
+                }
+            }
+            catch (FormatException)
+            {
+                AnsiConsole.MarkupLine("Error.[/]");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]An error occurred: {ex.Message}[/]");
+            }
+        }
+        
+        decimal price;
+        while (true)
+        {
+            try
+            {
+                price = AnsiConsole.Ask<decimal>(" [green]Price:[/]");
+                if (price < 0)
+                {
+                    AnsiConsole.MarkupLine("[red]Error, please re-enter.[/]");
+                }
+                else
+                {
+                    break;
+                }
+            }
+            catch (FormatException)
+            {
+                AnsiConsole.MarkupLine("Error.[/]");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]An error occurred: {ex.Message}[/]");
+            }
+
+        }
+        
+        var status = stock > 0 ? "Available" : "Unavailable";
         var image = AnsiConsole.Ask<string>(" [green]Image (URL)[/]:");
         var dateInsert = DateTime.Now;
         var dateUpdate = DateTime.Now;
@@ -429,9 +518,58 @@ class Program
                 .Title($" [green]Type[/] ({product.Type}):")
                 .AddChoices("Meal", "Drink")
                 .UseConverter(item => item == product.Type ? $"{item} (Current)" : item));
-        var stock = AnsiConsole.Ask<int>($" [green]Quantity[/] ({product.Stock}):", product.Stock);
-        var price = AnsiConsole.Ask<decimal>($" [green]Price[/] ({product.Price:C}):", product.Price);
-        var status = "Available";
+        
+        int stock;
+        while (true)
+        {
+            try
+            {
+                stock = AnsiConsole.Ask<int>($" [green]Quantity[/] ({product.Stock}):", product.Stock);
+                if (stock < 0)
+                {
+                    AnsiConsole.MarkupLine("[red]Error, please re-enter.[/]");
+                }
+                else
+                {
+                    break;
+                }
+            }
+            catch (FormatException)
+            {
+                AnsiConsole.MarkupLine("[red]Error.[/]");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]An error occurred: {ex.Message}[/]");
+            }
+        }
+        
+        decimal price;
+        while (true)
+        {
+            try
+            {
+                price = AnsiConsole.Ask<decimal>($" [green]Price[/] ({product.Price:C}):", product.Price);
+                if (price < 0)
+                {
+                    AnsiConsole.MarkupLine("[red]Error, pleasee re-enter.[/]");
+                }
+                else
+                {
+                    break;
+                }
+            }
+            catch (FormatException)
+            {
+                AnsiConsole.MarkupLine("[red]Error.[/]");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]An error occurred: {ex.Message}[/]");
+            }
+        }
+        
+        var status = stock > 0 ? "Available" : "Unavailable";
         var image = AnsiConsole.Ask<string>($" [green]Image (URL)[/] ({product.Image}):", product.Image);
         var dateUpdate = DateTime.Now;
 
@@ -455,28 +593,7 @@ class Program
         AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to return").AddChoices("Return"));
     }
 
-    static void DeleteProduct(ProductManager productManager)
-    {
-        var productId = AnsiConsole.Ask<int>(" [green]Product ID[/] need to delete:");
-        var product = productManager.GetAllProducts().Find(p => p.Id == productId);
-
-        if (product == null)
-        {
-            AnsiConsole.MarkupLine("[red]Product does not exist![/]");
-            return;
-        }
-
-        productManager.DeleteProduct(productId);
-        AnsiConsole.Clear();
-        // tiêu đề
-            AnsiConsole.Write(
-                new FigletText("Cafe Shop")
-                    .Centered()
-                    .Color(Color.Green));
-        AnsiConsole.MarkupLine("[green]Successfully![/]");
-        DisplayProducts(productManager);
-        AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to return").AddChoices("Return"));
-    }
+    
 
 
 
@@ -746,16 +863,49 @@ class Program
         DisplayProduct(products);
         DisplayOrder(order);
         
+        // Kiểm tra nếu danh sách sản phẩm trong đơn hàng rỗng
+        if (order.Items == null || !order.Items.Any())
+        {
+            AnsiConsole.MarkupLine("[red]The order is empty. No items to remove.[/]");
+            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to return").AddChoices("Return"));
+            return;
+        }
+
+        var productIDs = order.Items.Select(i => i.ProductID).ToList();
+
+        // Kiểm tra nếu không có sản phẩm nào để chọn
+        if (!productIDs.Any())
+        {
+            AnsiConsole.MarkupLine("[red]No products available to remove.[/]");
+            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to return").AddChoices("Return"));
+            return;
+        }
         var productID = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("Select Product ID to Remove:")
                 .AddChoices(order.Items.Select(i => i.ProductID)));
 
         var item = order.Items.First(i => i.ProductID == productID);
+
+        // Kiểm tra nếu sản phẩm được chọn không có trong đơn hàng
+        if (item == null)
+        {
+            AnsiConsole.MarkupLine("[red]Selected Product ID does not exist in the order.[/]");
+            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to return").AddChoices("Return"));
+            return;
+        }
         order.Items.Remove(item);
 
         // Restore the stock when the item is removed from the order
         var product = products.First(p => p.ProductID == item.ProductID);
+
+        // Kiểm tra nếu sản phẩm không tồn tại trong danh sách sản phẩm
+        if (product == null)
+        {
+            AnsiConsole.MarkupLine("[red]Product not found in the product list.[/]");
+            AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Press [green]Enter[/] to return").AddChoices("Return"));
+            return;
+        }
         product.Stock += item.Quantity;
 
         AnsiConsole.Clear();
@@ -831,11 +981,86 @@ class Program
 
         AnsiConsole.MarkupLine($"Total Amount: [green]{currentTotalAmount:F2}[/]");
         AnsiConsole.MarkupLine($"Tips (5% of total): [green]{currentTips:F2}[/]");
-        
 
-        
-        
+        // Define the directory where invoices will be saved
+        string directoryPath = @"C:\Users\ADMIN\CafeShop\Invoices\Invoice_001.txt";
+
+        // Save the receipt to a file
+        SaveInvoiceToFile(order, currentTips, currentTotalAmount, directoryPath);
+        // Save the receipt to the specified file
+        try
+        {
+            SaveInvoiceToFile(order, currentTips, currentTotalAmount, directoryPath);
+            AnsiConsole.MarkupLine($"[green]Invoice has been saved to {directoryPath}[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]An error occurred: {ex.Message}[/]");
+        }
+    
+       
+    
     }
+
+    static void SaveInvoiceToFile(Order order, decimal tips, decimal totalAmount, string directoryPath)
+    {
+        // Tạo thư mục nếu chưa tồn tại
+        if (!Directory.Exists(directoryPath))
+        {
+            Directory.CreateDirectory(directoryPath);
+        }
+
+        // Tạo tên file độc nhất dựa trên thời gian hiện tại và ID đơn hàng
+        string fileName = $"Invoice_{order.CustomerID}.txt";
+        string filePath = Path.Combine(directoryPath, fileName);
+
+        using (var writer = new StreamWriter(filePath))
+        {
+            string header = "Cafe Shop";
+            writer.WriteLine(new string('=', 50));
+            writer.WriteLine(header.PadLeft(50 / 2 + header.Length / 2).PadRight(50));
+            writer.WriteLine(new string('=', 50));
+            writer.WriteLine();
+
+            writer.WriteLine("18 Tam Trinh, Hoang Mai, Hanoi");
+            writer.WriteLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            writer.WriteLine();
+            writer.WriteLine("Items:");
+
+            
+            const int colWidth1 = 12; // Width for Customer ID
+            const int colWidth2 = 12; // Width for Product ID
+            const int colWidth3 = 10; // Width for Quantity
+            const int colWidth4 = 15; // Width for Price
+            const int colWidth5 = 15; // Width for Total
+
+    
+            writer.WriteLine("+" + new string('-', colWidth1) + "+" + new string('-', colWidth2) + "+" + new string('-', colWidth3) + "+" + new string('-', colWidth4) + "+" + new string('-', colWidth5) + "+");
+            writer.WriteLine($"| {"Customer ID".PadRight(colWidth1)} | {"Product ID".PadRight(colWidth2)} | {"Quantity".PadRight(colWidth3)} | {"Price".PadRight(colWidth4)} | {"Total".PadRight(colWidth5)} ");
+            writer.WriteLine("+" + new string('-', colWidth1) + "+" + new string('-', colWidth2) + "+" + new string('-', colWidth3) + "+" + new string('-', colWidth4) + "+" + new string('-', colWidth5) + "+");
+
+
+            // Dữ liệu bảng
+            foreach (var item in order.Items)
+            {
+                // Chuyển CustomerID từ int sang string
+                string customerId = order.CustomerID.ToString().PadRight(colWidth1);
+                string productId = item.ProductID.PadRight(colWidth2);
+                string quantity = item.Quantity.ToString().PadRight(colWidth3);
+                string price = item.Price.ToString("C").PadRight(colWidth4);
+                string total = (item.Quantity * item.Price).ToString("C").PadRight(colWidth5);
+
+                writer.WriteLine($"| {customerId} | {productId} | {quantity} | {price} | {total} ");
+            }
+
+            writer.WriteLine("+" + new string('-', colWidth1) + "+" + new string('-', colWidth2) + "+" + new string('-', colWidth3) + "+" + new string('-', colWidth4) + "+" + new string('-', colWidth5) + "+");
+        
+            writer.WriteLine();
+            writer.WriteLine($"Total Amount: {totalAmount:F2}");
+            writer.WriteLine($"Tips (5% of total): {tips:F2}");
+        }
+    }
+
 
     static void SaveOrder(Order order, decimal tips, decimal totalAmount)
     {
@@ -964,6 +1189,7 @@ class Program
             
         }
     }
+    
 
     static List<Customer> GetCustomers()
     {
@@ -1031,7 +1257,7 @@ class Program
 
         AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("Nhấn [green]Enter[/] để quay lại Menu chính.")
+                .Title("Press [green]Enter[/] back to Main Menu.")
                 .AddChoices("back"));
     }
 
