@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.IO;
+using Dapper;
 
 class Program
 {
@@ -1255,6 +1256,10 @@ class Program
         table.AddRow(totalCashiers.ToString(), totalCustomers.ToString(), todaysIncome.ToString("F2"), totalIncome.ToString("F2"));
         AnsiConsole.Write(table);
 
+        // Lấy dữ liệu doanh số 7 ngày gần nhất và hiển thị sơ đồ cột
+        var dailySales = GetDailySales();
+        DisplaySalesBarChart(dailySales);
+
         AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("Press [green]Enter[/] back to Main Menu.")
@@ -1303,6 +1308,41 @@ class Program
             var command = new MySqlCommand("SELECT SUM(TotalAmount) FROM Orders", connection);
             return Convert.ToDecimal(command.ExecuteScalar());
         }
+    }
+
+
+    static List<DailySales> GetDailySales()
+    {
+        string connectionString = "Server=localhost;Database=cafe_shop;User=root;Password=youngboy19";
+        using (var connection = new MySqlConnection(connectionString))
+        {
+            connection.Open();
+            var query = @"
+                SELECT DATE(OrderDate) AS SaleDate, SUM(TotalAmount) AS TotalSales
+                FROM Orders
+                GROUP BY DATE(OrderDate)
+                ORDER BY SaleDate DESC
+                LIMIT 7";
+            return connection.Query<DailySales>(query).ToList();
+        }
+    }
+
+    static void DisplaySalesBarChart(List<DailySales> sales)
+    {
+        var chart = new BarChart()
+            .Width(60)
+            .Label("[bold underline]Today's Income (Last 7 Days)[/]")
+            .CenterLabel();
+
+        // Sắp xếp lại theo thứ tự tăng dần của ngày
+        sales = sales.OrderBy(s => s.SaleDate).ToList();
+
+        foreach (var sale in sales)
+        {
+            chart.AddItem(sale.SaleDate.ToString("yyyy-MM-dd"), (double)sale.TotalSales, Color.Green);
+        }
+
+        AnsiConsole.Write(chart);
     }
 
 }
